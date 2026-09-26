@@ -64,6 +64,7 @@ class BuildStaticTests(unittest.TestCase):
         self.assertNotIn("'/demo3d/", index_html)
         self.assertNotIn('"/demo3d/', main_js)
         self.assertNotIn("'/demo3d/", main_js)
+        self.assertIn('"three":"./static/vendor/three.module.js"', index_html.replace(" ", ""))
 
         scenes = json.loads((demo3d / "scenes.json").read_text(encoding="utf-8"))["scenes"]
         self.assertEqual(scenes[0]["slug"], "one")
