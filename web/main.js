@@ -1,6 +1,12 @@
 import * as THREE from 'three';
-import { OrbitControls } from '/demo3d/static/vendor/controls/OrbitControls.js';
-import { GLTFLoader } from '/demo3d/static/vendor/loaders/GLTFLoader.js';
+import { OrbitControls } from './vendor/controls/OrbitControls.js';
+import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+
+const appRoot = new URL('../', import.meta.url);
+
+function assetUrl(path) {
+  return new URL(path, appRoot).href;
+}
 
 const canvas = document.getElementById('view');
 const select = document.getElementById('scene-select');
@@ -90,12 +96,32 @@ function rounded(value, digits = 3) {
   return Object.is(result, -0) ? 0 : result;
 }
 
+// Unit vector from camera toward the anchor (look direction).
+function lookDir(yawDeg, pitchDeg) {
+  const yaw = THREE.MathUtils.degToRad(yawDeg);
+  const pitch = THREE.MathUtils.degToRad(pitchDeg);
+  return new THREE.Vector3(
+    Math.sin(yaw) * Math.cos(pitch),
+    Math.sin(pitch),
+    Math.cos(yaw) * Math.cos(pitch),
+  );
+}
+
+function normalizeYaw(yawDeg) {
+  let yaw = yawDeg;
+  while (yaw > 180) yaw -= 360;
+  while (yaw <= -180) yaw += 360;
+  return yaw;
+}
+
 function getView() {
+  const orbitYaw = THREE.MathUtils.radToDeg(controls.getAzimuthalAngle());
+  const orbitPitch = 90 - THREE.MathUtils.radToDeg(controls.getPolarAngle());
   return {
     anchor: controls.target.toArray().map(value => rounded(value)),
     distance: rounded(controls.getDistance()),
-    yaw: rounded(THREE.MathUtils.radToDeg(controls.getAzimuthalAngle()), 2),
-    pitch: rounded(90 - THREE.MathUtils.radToDeg(controls.getPolarAngle()), 2),
+    yaw: rounded(normalizeYaw(orbitYaw + 180), 2),
+    pitch: rounded(-orbitPitch, 2),
   };
 }
 
@@ -128,17 +154,28 @@ configButton.addEventListener('click', () => {
   copyText(`"anchor": ${JSON.stringify(anchor)},\n"distance": ${distance},\n"yaw": ${yaw},\n"pitch": ${pitch}`);
 });
 
-function applyView(view) {
-  const yaw = THREE.MathUtils.degToRad(view.yaw);
-  const pitch = THREE.MathUtils.degToRad(view.pitch);
-  const direction = new THREE.Vector3(
-    Math.sin(yaw) * Math.cos(pitch),
-    Math.sin(pitch),
-    Math.cos(yaw) * Math.cos(pitch),
-  );
-  controls.target.fromArray(view.anchor);
-  camera.position.copy(controls.target).addScaledVector(direction, view.distance);
+const centerRay = new THREE.Raycaster();
+const centerNdc = new THREE.Vector2(0, 0);
+
+// The saved anchor can sit in empty space just in front of the lens. Orbiting
+// that point swings the distant scene like a head turn. Seat the pivot on the
+// surface in the middle of the view and keep the camera where it is.
+function seatAnchorOnView() {
+  centerRay.setFromCamera(centerNdc, camera);
+  const hit = centerRay.intersectObject(world, true).find(item => item.object.isMesh);
+  if (!hit) return;
+  if (Math.abs(hit.distance - camera.position.distanceTo(controls.target)) < 0.05) return;
+  controls.target.copy(hit.point);
   controls.update();
+}
+
+function applyView(view) {
+  const direction = lookDir(view.yaw, view.pitch);
+  controls.target.fromArray(view.anchor);
+  camera.position.copy(controls.target).addScaledVector(direction, -view.distance);
+  camera.lookAt(controls.target);
+  controls.update();
+  seatAnchorOnView();
   updatePanel();
 }
 
@@ -186,14 +223,8 @@ function setupCamera(object, entry) {
   const radius = Math.max(size.length() / 2, 0.1);
   const yaw = entry.yaw ?? 35;
   const pitch = entry.pitch ?? 20;
-  const yawRadians = THREE.MathUtils.degToRad(yaw);
-  const pitchRadians = THREE.MathUtils.degToRad(pitch);
-  const back = new THREE.Vector3(
-    Math.sin(yawRadians) * Math.cos(pitchRadians),
-    Math.sin(pitchRadians),
-    Math.cos(yawRadians) * Math.cos(pitchRadians),
-  );
-  const forward = back.clone().negate();
+  const forward = lookDir(yaw, pitch);
+  const back = forward.clone().negate();
   const right = forward.clone().cross(new THREE.Vector3(0, 1, 0)).normalize();
   const up = right.clone().cross(forward).normalize();
   const tanVertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
@@ -249,7 +280,7 @@ async function openScene(slug, updateUrl = false) {
     window.history.pushState({}, '', url);
   }
   try {
-    const gltf = await loader.loadAsync(`/demo3d/models/${slug}.glb`);
+    const gltf = await loader.loadAsync(assetUrl(`models/${slug}.glb`));
     if (version !== loadVersion) {
       disposeModel(gltf.scene);
       return;
@@ -364,7 +395,7 @@ requestAnimationFrame(animate);
 
 async function start() {
   try {
-    const response = await fetch('/demo3d/api/scenes', { cache: 'no-store' });
+    const response = await fetch(assetUrl('scenes.json'), { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     catalog = data.scenes;
@@ -383,7 +414,7 @@ async function start() {
     else showChooser(catalog.length ? 'Откройте локацию из списка.' : 'Пока нет доступных сцен.');
   } catch (error) {
     console.error('Catalog load failed:', error);
-    showChooser('Не удалось получить список сцен. Проверьте сервер.');
+    showChooser('Не удалось получить список сцен. Проверьте scenes.json и пересоберите сайт.');
     showStatus('Ошибка загрузки списка сцен.', true);
   }
 }
