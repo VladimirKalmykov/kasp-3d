@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101820">
+  <title>Walk Viewer Web</title>
+  <link rel="stylesheet" href="/demo3d/static/style.css">
+  <script type="importmap">
+    {"imports":{"three":"/demo3d/static/vendor/three.module.js"}}
+  </script>
+</head>
+<body>
+  <canvas id="view" aria-label="Трёхмерная сцена"></canvas>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">◈</span><span>Walk Viewer</span></div>
+    <div class="toolbar">
+      <label class="scene-picker"><span>Сцена</span><select id="scene-select" aria-label="Выбрать сцену"><option value="">Выбрать сцену</option></select></label>
+      <button id="reset-view" type="button" disabled>Сбросить вид</button>
+    </div>
+  </header>
+  <main id="welcome" class="welcome" hidden>
+    <div class="welcome-card">
+      <p class="eyebrow">3D ПРОСМОТР</p>
+      <h1>Выберите сцену</h1>
+      <p id="welcome-message" class="welcome-message">Откройте локацию из списка.</p>
+      <div id="scene-list" class="scene-list"></div>
+    </div>
+  </main>
+  <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+  <aside id="camera-panel" class="camera-panel" hidden>
+    <div class="panel-title"><span>Положение камеры</span><span class="panel-hint">Нажмите значение для копирования</span></div>
+    <div class="metric"><span>Якорь X / Y / Z</span><button id="copy-anchor" type="button" title="Скопировать координаты якоря"></button></div>
+    <div class="metric"><span>Угол yaw / pitch</span><button id="copy-angle" type="button" title="Скопировать углы"></button></div>
+    <div class="metric"><span>Дистанция</span><button id="copy-distance" type="button" title="Скопировать дистанцию"></button></div>
+    <button id="copy-config" class="copy-config" type="button">Скопировать параметры для конфига</button>
+    <div id="copy-feedback" class="copy-feedback" aria-live="polite"></div>
+  </aside>
+  <div id="controls-hint" class="controls-hint" hidden>Мышь — вращение · Колесо или Shift + перетаскивание — зум · WASD — сдвиг якоря</div>
+  <script type="module" src="/demo3d/static/main.js"></script>
+</body>
+</html>

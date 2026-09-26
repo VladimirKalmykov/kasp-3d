@@ -1,0 +1,22 @@
+{
+  "scenes": [
+    {
+      "slug": "location1",
+      "title": "Локация 1",
+      "file": "demo/location1.glb",
+"anchor": [-6.444,15.019,-36.393],
+"distance": 1.669,
+"yaw": -134.07,
+"pitch": 29.59
+    },
+    {
+      "slug": "location2",
+      "title": "Локация 2 & 3",
+      "file": "demo/location2-3.glb",
+"anchor": [-54.508,-1.317,-18.423],
+"distance": 34.484,
+"yaw": -117.28,
+"pitch": 20.56
+    }
+  ]
+}
